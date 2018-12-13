@@ -2,16 +2,18 @@ WHITE="$(printf '\033[1;37m')"
 BLUE="$(printf '\033[1;46m\033[1;37m')"
 NO_COLOR="$(printf '\033[0m')"
 
+hab pkg install -bf core/busybox-static
 hab pkg install -bf core/vault
 hab pkg install -bf core/curl
-hab pkg install -bf core/go
-
 
 build() {
+  hab pkg install -bf core/git
+  hab pkg install -bf core/go
   go get github.com/hashicorp/vault/helper/pluginutil
   go get github.com/hashicorp/vault/logical/plugin
+  go get github.com/hashicorp/go-hclog
   go get github.com/skylerto/vault-habitat-token-gen/habtoken
-  go build
+  go build -o vault-habitat-token-gen
 }
 
 wait_for_supervisor() {
@@ -21,7 +23,9 @@ wait_for_supervisor() {
 }
 
 start_vault() {
-  vault server -dev-listen-address=0.0.0.0:8200 -dev -config=/src/config.hcl  2>&1 | tee /vault.logs &
+  vault server -dev-listen-address=0.0.0.0:8200 -dev -config=/src/config.hcl > /vault.logs 2>&1 &
+  PID=$(ps aux | grep "vault server" | grep -v "grep" | awk '{print $1}')
+  echo "${PID}" > /vault.pid
 }
 
 root_token() {
@@ -34,10 +38,16 @@ variables() {
 }
 
 add_catalog() {
+  eval $(variables)
   sum=$(sha256sum vault-habitat-token-gen | awk '{print $1}')
   vault write sys/plugins/catalog/secret/vault-habitat-token-gen \
     sha256=${sum} \
     command="vault-habitat-token-gen"
+}
+
+enable() {
+  eval $(variables)
+  vault secrets enable -path=vault-habitat-token-gen vault-habitat-token-gen
 }
 
 runcmd() {
@@ -56,8 +66,11 @@ The following commands are available in addition to the regular studio commands:
 1. Vault
   * start_vault - Starts a local vault
   * root_token - fetches the vault root token
+  * variables - return the shell variables required to talk to vault
 2. Help
   * help - This message$NO_COLOR
+
+Test it out: vault write vault-habitat-token-gen/rotate current=foo
 
 
 HELP

@@ -1,9 +1,9 @@
 package main
 
 import (
-	"log"
 	"os"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
 	"github.com/skylerto/vault-habitat-token-gen/habtoken"
@@ -21,6 +21,9 @@ func main() {
 		BackendFactoryFunc: habtoken.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
-		log.Fatal(err)
+		logger := hclog.New(&hclog.LoggerOptions{})
+
+		logger.Error("plugin shutting down", "error", err)
+		os.Exit(1)
 	}
 }
