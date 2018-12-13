@@ -1,10 +1,14 @@
-WHITE="$(printf '\033[1;37m')"
+WHITE="example.key"
 BLUE="$(printf '\033[1;46m\033[1;37m')"
 NO_COLOR="$(printf '\033[0m')"
 
 hab pkg install -bf core/busybox-static
 hab pkg install -bf core/vault
 hab pkg install -bf core/curl
+
+VAULT_ADDR="https://127.0.0.1:8200"
+VAULT_INIT="/vault.init"
+export VAULT_SKIP_VERIFY="true"
 
 build() {
   hab pkg install -bf core/git
@@ -23,31 +27,65 @@ wait_for_supervisor() {
 }
 
 start_vault() {
-  vault server -dev-listen-address=0.0.0.0:8200 -dev -config=/src/config.hcl > /vault.logs 2>&1 &
-  PID=$(ps aux | grep "vault server" | grep -v "grep" | awk '{print $1}')
-  echo "${PID}" > /vault.pid
+  if [ -f /vault.pid ]; then
+    echo "vault started, run stop_vault first"
+  else
+    # vault server -dev-listen-address=172.17.0.2:8200 -dev -config=/src/config.hcl > /vault.logs 2>&1 &
+    vault server -config=/src/config.hcl > /vault.logs 2>&1 &
+    PID=$(ps aux | grep "vault server" | grep -v "grep" | awk '{print $1}')
+    echo "${PID}" > /vault.pid
+    unseal
+  fi
+}
+
+unseal() {
+  vault operator init -address ${VAULT_ADDR} | tee ${VAULT_INIT} > /dev/null
+  cat ${VAULT_INIT} | grep '^Unseal' | awk '{print $4}' | for key in $(cat -); do
+    vault operator unseal -address ${VAULT_ADDR} "$key"
+    COUNTER=$((COUNTER + 1))
+  done
+}
+
+stop_vault() {
+  if [ -f /vault.pid ]; then
+    kill -9 $(cat /vault.pid) > /dev/null 2>&1
+    rm /vault.pid > /dev/null 2>&1
+    rm /vault.logs > /dev/null 2>&1
+    rm /vault.init > /dev/null 2>&1
+    rm -rf /vault > /dev/null 2>&1
+  fi
+}
+
+logs() {
+  cat /vault.logs
 }
 
 root_token() {
-  cat /vault.logs | grep "Root Token" | awk '{print $3}'
+  cat /vault.init | grep "Root Token" | awk '{print $4}'
 }
 
 variables() {
-  echo "export VAULT_ADDR='http://127.0.0.1:8200'"
+  echo "export VAULT_ADDR='https://127.0.0.1:8200'"
   echo "export VAULT_TOKEN=$(root_token)"
 }
 
 add_catalog() {
   eval $(variables)
   sum=$(sha256sum vault-habitat-token-gen | awk '{print $1}')
-  vault write sys/plugins/catalog/secret/vault-habitat-token-gen \
+  vault write sys/plugins/catalog/secret/habitattoken \
     sha256=${sum} \
     command="vault-habitat-token-gen"
 }
 
 enable() {
   eval $(variables)
-  vault secrets enable -path=vault-habitat-token-gen vault-habitat-token-gen
+  vault secrets enable -path=habitattoken -plugin-name="habitattoken" plugin
+  # vault secrets enable -path=habitattoken -plugin-name="habitattoken" vault-habitat-token-gen
+}
+
+test() {
+  eval $(variables)
+  runcmd "vault write habitattoken/rotate current=foo"
 }
 
 runcmd() {
@@ -70,7 +108,7 @@ The following commands are available in addition to the regular studio commands:
 2. Help
   * help - This message$NO_COLOR
 
-Test it out: vault write vault-habitat-token-gen/rotate current=foo
+Test it out: vault write habitattoken/rotate current=foo
 
 
 HELP
