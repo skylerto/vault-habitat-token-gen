@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/pluginutil"
 	"github.com/hashicorp/vault/logical/plugin"
-	"github.com/skylerto/vault-habitat-token-gen/token"
+	"github.com/skylerto/vault-habitat-token-gen/habtoken"
 )
 
 func main() {
@@ -18,7 +18,7 @@ func main() {
 	tlsProviderFunc := pluginutil.VaultPluginTLSProvider(tlsConfig)
 
 	if err := plugin.Serve(&plugin.ServeOpts{
-		BackendFactoryFunc: gen.Factory,
+		BackendFactoryFunc: habtoken.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	}); err != nil {
 		log.Fatal(err)

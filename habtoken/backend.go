@@ -50,7 +50,7 @@ rotates the auth token
 		},
 	}
 
-	return &b
+	return &b, nil
 }
 
 const backendHelp = `

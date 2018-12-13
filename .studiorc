@@ -4,18 +4,40 @@ NO_COLOR="$(printf '\033[0m')"
 
 hab pkg install -bf core/vault
 hab pkg install -bf core/curl
+hab pkg install -bf core/go
+
+
+build() {
+  go get github.com/hashicorp/vault/helper/pluginutil
+  go get github.com/hashicorp/vault/logical/plugin
+  go get github.com/skylerto/vault-habitat-token-gen/habtoken
+  go build
+}
+
+wait_for_supervisor() {
+  until hab svc status > /dev/null 2>&1; do
+    sleep 1
+  done
+}
 
 start_vault() {
-  runcmd "hab svc load core/vault"
+  vault server -dev-listen-address=0.0.0.0:8200 -dev -config=/src/config.hcl  2>&1 | tee /vault.logs &
 }
 
 root_token() {
-  cat /hab/sup/default/sup.log | grep "Root Token" | awk '{print $4}'
+  cat /vault.logs | grep "Root Token" | awk '{print $3}'
 }
 
 variables() {
   echo "export VAULT_ADDR='http://127.0.0.1:8200'"
   echo "export VAULT_TOKEN=$(root_token)"
+}
+
+add_catalog() {
+  sum=$(sha256sum vault-habitat-token-gen | awk '{print $1}')
+  vault write sys/plugins/catalog/secret/vault-habitat-token-gen \
+    sha256=${sum} \
+    command="vault-habitat-token-gen"
 }
 
 runcmd() {
