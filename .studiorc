@@ -1,0 +1,44 @@
+WHITE="$(printf '\033[1;37m')"
+BLUE="$(printf '\033[1;46m\033[1;37m')"
+NO_COLOR="$(printf '\033[0m')"
+
+hab pkg install -bf core/vault
+hab pkg install -bf core/curl
+
+start_vault() {
+  runcmd "hab svc load core/vault"
+}
+
+root_token() {
+  cat /hab/sup/default/sup.log | grep "Root Token" | awk '{print $4}'
+}
+
+variables() {
+  echo "export VAULT_ADDR='http://127.0.0.1:8200'"
+  echo "export VAULT_TOKEN=$(root_token)"
+}
+
+runcmd() {
+  echo -e "${WHITE}$@${NO_COLOR}"
+
+  $@
+}
+
+help() {
+  cat <<HELP
+$BLUE
+Welcome to the Vault Habitat Token Studio
+
+The following commands are available in addition to the regular studio commands:
+
+1. Vault
+  * start_vault - Starts a local vault
+  * root_token - fetches the vault root token
+2. Help
+  * help - This message$NO_COLOR
+
+
+HELP
+}
+
+help
