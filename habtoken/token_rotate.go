@@ -16,7 +16,14 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	// 	return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
 	// }
 
+	b.Logger().Info("Hab Depot Logger")
 	current := d.Get("current").(string)
+	if current == "" {
+		entity, _ := req.Storage.Get(context, "token")
+		current = string(entity.Value)
+		b.Logger().Info("Checking storage backend " + current)
+	}
+
 	habBldrUrl := d.Get("hab_bldr_url").(string)
 	apiPath := "/v1/profile/access-tokens"
 
@@ -26,10 +33,18 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	request.Header.Set("Authorization", "Bearer "+current)
 	resp, _ := client.Do(request)
 
-	var result map[string]interface{}
+	var result map[string]string
 
 	json.NewDecoder(resp.Body).Decode(&result)
-	token := result["token"]
+	token := string(result["token"])
+
+	item := logical.StorageEntry{
+		Key:      "token",
+		Value:    []byte(token),
+		SealWrap: false,
+	}
+
+	req.Storage.Put(context, &item)
 
 	return &logical.Response{
 		Data: map[string]interface{}{

@@ -34,7 +34,7 @@ start_vault() {
     vault server -config=/src/config.hcl > /vault.logs 2>&1 &
     PID=$(ps aux | grep "vault server" | grep -v "grep" | awk '{print $1}')
     echo "${PID}" > /vault.pid
-    sleep 5
+    sleep 2
     unseal
   fi
 }

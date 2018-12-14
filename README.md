@@ -2,6 +2,10 @@
 
 This is a vault plugin backend used for dynamic generation of habitat authentication tokens.
 
+## Usage
+
+For usage see Help menu in the `.studiorc`
+
 
 ## Developer Notes
 
