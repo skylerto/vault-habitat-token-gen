@@ -2,10 +2,30 @@
 
 This is a vault plugin backend used for dynamic generation of habitat authentication tokens.
 
-## Usage
+The purpose is to provide a way to authenticate with vault, then retrieve and rotate habitat depot
+auth tokens for both public and on-prem.
 
-For usage see Help menu in the `.studiorc`
 
+## Features
+
+The following is the first release feature set:
+
+* Login to any Depot (requires the first auth token)
+* Get Auth Token
+* Refresh Auth Token
+
+Each of these features should be implemented for any (user account, depot) pair.
+Which shall be governed by the paths that you write to within the plugin.
+
+## Examples
+
+```
+vault write habitattoken/<unique-id>/login auth_token=${current} hab_bldr_url=https://bldr.habitat.sh
+vault write habitattoken/<unique-id>/get
+vault write habitattoken/<unique-id>/renew
+```
+
+In this case we've enabled the plugin at the path `habitattoken`.
 
 ## Developer Notes
 
