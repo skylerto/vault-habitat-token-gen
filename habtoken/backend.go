@@ -52,10 +52,6 @@ rotates the auth token
 						Type:        framework.TypeString,
 						Description: "The Current Token",
 					},
-					"hab_bldr_url": &framework.FieldSchema{
-						Type:        framework.TypeString,
-						Description: "The Habitat Builder to Auth against",
-					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
 					logical.UpdateOperation: b.tokenRotate,

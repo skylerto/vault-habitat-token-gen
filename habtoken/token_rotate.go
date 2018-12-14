@@ -2,8 +2,7 @@ package habtoken
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
+	// "net/http"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"

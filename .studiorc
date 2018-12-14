@@ -85,9 +85,8 @@ enable() {
 }
 
 test() {
-  local current=${1}
   eval $(variables)
-  runcmd "vault write habitattoken/rotate current=${current} hab_bldr_url=https://bldr.habitat.sh"
+  runcmd "vault write habitattoken/rotate current=foo"
 }
 
 runcmd() {
