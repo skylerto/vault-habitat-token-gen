@@ -2,7 +2,8 @@ package habtoken
 
 import (
 	"context"
-	// "net/http"
+	"encoding/json"
+	"net/http"
 
 	"github.com/hashicorp/vault/logical"
 	"github.com/hashicorp/vault/logical/framework"
@@ -15,8 +16,20 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	// 	return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
 	// }
 
-	// current := d.Get("current").(string)
-	token := "this is a token"
+	current := d.Get("current").(string)
+	habBldrUrl := d.Get("hab_bldr_url").(string)
+	apiPath := "/v1/profile/access-tokens"
+
+	client := &http.Client{}
+	request, _ := http.NewRequest("POST", habBldrUrl+apiPath, nil)
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Authorization", "Bearer "+current)
+	resp, _ := client.Do(request)
+
+	var result map[string]interface{}
+
+	json.NewDecoder(resp.Body).Decode(&result)
+	token := result["token"]
 
 	return &logical.Response{
 		Data: map[string]interface{}{

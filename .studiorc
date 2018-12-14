@@ -34,6 +34,7 @@ start_vault() {
     vault server -config=/src/config.hcl > /vault.logs 2>&1 &
     PID=$(ps aux | grep "vault server" | grep -v "grep" | awk '{print $1}')
     echo "${PID}" > /vault.pid
+    sleep 5
     unseal
   fi
 }
@@ -84,8 +85,9 @@ enable() {
 }
 
 test() {
+  local current=${1}
   eval $(variables)
-  runcmd "vault write habitattoken/rotate current=foo"
+  runcmd "vault write habitattoken/rotate current=${current} hab_bldr_url=https://bldr.habitat.sh"
 }
 
 runcmd() {
