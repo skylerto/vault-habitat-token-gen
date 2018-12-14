@@ -2,6 +2,7 @@ package habtoken
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"net/http"
 
@@ -19,7 +20,10 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	b.Logger().Info("Hab Depot Logger")
 	current := d.Get("current").(string)
 	if current == "" {
-		entity, _ := req.Storage.Get(context, "token")
+		entity, err := req.Storage.Get(context, "token")
+		if err != nil {
+			return nil, err
+		}
 		current = string(entity.Value)
 		b.Logger().Info("Checking storage backend " + current)
 	}
@@ -27,16 +31,32 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	habBldrUrl := d.Get("hab_bldr_url").(string)
 	apiPath := "/v1/profile/access-tokens"
 
-	client := &http.Client{}
-	request, _ := http.NewRequest("POST", habBldrUrl+apiPath, nil)
+	b.Logger().Info("Making request against: " + habBldrUrl)
+
+	// skip tls verify
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{Transport: tr}
+	request, err := http.NewRequest("POST", habBldrUrl+apiPath, nil)
+	if err != nil {
+		return nil, err
+	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+current)
-	resp, _ := client.Do(request)
+	resp, err := client.Do(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	b.Logger().Info("Returned response code " + string(resp.StatusCode))
 
 	var result map[string]string
 
 	json.NewDecoder(resp.Body).Decode(&result)
-	token := string(result["token"])
+	token := result["token"]
 
 	item := logical.StorageEntry{
 		Key:      "token",

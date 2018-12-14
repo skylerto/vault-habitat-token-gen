@@ -117,3 +117,6 @@ HELP
 }
 
 help
+start_vault
+add_catalog
+enable
