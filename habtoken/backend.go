@@ -40,15 +40,18 @@ func Backend() *backend {
 	b.Backend = &framework.Backend{
 		Help: "",
 		Paths: []*framework.Path{
-			// habtoken/rotate
 			&framework.Path{
-				Pattern:      "rotate",
-				HelpSynopsis: "Returns the rotated token",
+				Pattern:      framework.MatchAllRegex("id") + "/login",
+				HelpSynopsis: "Authenticates with the corresponding builder",
 				HelpDescription: `
-rotates the auth token
+Authenticates with the corresponding builder
 `,
 				Fields: map[string]*framework.FieldSchema{
-					"current": &framework.FieldSchema{
+					"id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The ID to Write At",
+					},
+					"auth_token": &framework.FieldSchema{
 						Type:        framework.TypeString,
 						Description: "The Current Token",
 					},
@@ -58,7 +61,39 @@ rotates the auth token
 					},
 				},
 				Callbacks: map[logical.Operation]framework.OperationFunc{
-					logical.UpdateOperation: b.tokenRotate,
+					logical.UpdateOperation: b.tokenLogin,
+				},
+			},
+			&framework.Path{
+				Pattern:      framework.MatchAllRegex("id") + "/renew",
+				HelpSynopsis: "Authenticates with the corresponding builder",
+				HelpDescription: `
+Authenticates with the corresponding builder
+`,
+				Fields: map[string]*framework.FieldSchema{
+					"id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The ID to Write At",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.tokenRenew,
+				},
+			},
+			&framework.Path{
+				Pattern:      framework.MatchAllRegex("id") + "/get",
+				HelpSynopsis: "Gets the Authenticated Token",
+				HelpDescription: `
+Gets the Authenticated Token
+`,
+				Fields: map[string]*framework.FieldSchema{
+					"id": &framework.FieldSchema{
+						Type:        framework.TypeString,
+						Description: "The ID to Fetch At",
+					},
+				},
+				Callbacks: map[logical.Operation]framework.OperationFunc{
+					logical.ReadOperation: b.tokenGet,
 				},
 			},
 		},

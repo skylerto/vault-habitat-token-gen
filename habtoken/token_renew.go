@@ -12,23 +12,21 @@ import (
 )
 
 // pathPassword corresponds to POST gen/password.
-func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// if err := validateFields(req, d); err != nil {
-	// 	return nil, logical.CodedError(http.StatusUnprocessableEntity, err.Error())
-	// }
+func (b *backend) tokenRenew(context context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 
-	b.Logger().Info("Hab Depot Logger")
-	current := d.Get("current").(string)
-	if current == "" {
-		entity, err := req.Storage.Get(context, "token")
-		if err != nil {
-			return nil, err
-		}
-		current = string(entity.Value)
-		b.Logger().Info("Checking storage backend " + current)
+	id := d.Get("id").(string)
+
+	entity, err := req.Storage.Get(context, id+"/auth_token")
+	if err != nil {
+		return nil, err
 	}
+	authToken := string(entity.Value)
 
-	habBldrUrl := d.Get("hab_bldr_url").(string)
+	bldrEntity, err := req.Storage.Get(context, id+"/bldr_url")
+	if err != nil {
+		return nil, err
+	}
+	habBldrUrl := string(bldrEntity.Value)
 	apiPath := "/v1/profile/access-tokens"
 
 	b.Logger().Info("Making request against: " + habBldrUrl)
@@ -44,7 +42,7 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("Authorization", "Bearer "+current)
+	request.Header.Set("Authorization", "Bearer "+authToken)
 	resp, err := client.Do(request)
 
 	if err != nil {
@@ -58,17 +56,27 @@ func (b *backend) tokenRotate(context context.Context, req *logical.Request, d *
 	json.NewDecoder(resp.Body).Decode(&result)
 	token := result["token"]
 
-	item := logical.StorageEntry{
-		Key:      "token",
+	tokenStorage := logical.StorageEntry{
+		Key:      id + "/auth_token",
 		Value:    []byte(token),
 		SealWrap: false,
 	}
 
-	req.Storage.Put(context, &item)
+	req.Storage.Put(context, &tokenStorage)
+
+	urlStorage := logical.StorageEntry{
+		Key:      id + "/bldr_url",
+		Value:    []byte(habBldrUrl),
+		SealWrap: false,
+	}
+
+	req.Storage.Put(context, &urlStorage)
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"value": token,
+			"id":         id,
+			"auth_token": token,
+			"bldr_url":   habBldrUrl,
 		},
 	}, nil
 }

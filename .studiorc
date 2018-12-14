@@ -40,7 +40,12 @@ start_vault() {
 }
 
 unseal() {
-  vault operator init -address ${VAULT_ADDR} | tee ${VAULT_INIT} > /dev/null
+
+  if [ -f ${VAULT_INIT} ]; then
+    echo "Vault init file already created"
+  else
+    vault operator init -address ${VAULT_ADDR} | tee ${VAULT_INIT} > /dev/null
+  fi
   cat ${VAULT_INIT} | grep '^Unseal' | awk '{print $4}' | for key in $(cat -); do
     vault operator unseal -address ${VAULT_ADDR} "$key"
     COUNTER=$((COUNTER + 1))
@@ -120,3 +125,8 @@ help
 start_vault
 add_catalog
 enable
+
+echo "vault write habitattoken/skylerto/login hab_bldr_url=https://bldr.habitat.sh auth_token=<token>"
+echo "vault read habitattoken/skylerto/get"
+echo "vault read habitattoken/skylerto/renew"
+"
